@@ -1,7 +1,30 @@
 <html>
   <head>
   <script>
-    
+    class Player {
+
+      constructor(colour) {
+        this.colour = colour;
+        this.memory = {}; // States => Options
+        this.history = []; // of [State, Move]
+      }
+
+      playMove(game) {
+        var options = this.getOptions(game);
+        var item = options[Math.floor(Math.random()*options.length)];
+        //Remember Moves Taken
+        this.history.push([game.stateString(), item]);
+
+        game.play(this.colour, item);
+      }
+
+      getOptions(game) {
+        return game.moves();
+      }
+
+    }
+
+
     class Game {
       constructor() {
         this.board = []
@@ -137,23 +160,29 @@
     }
 
     game = new Game();
-    curPlayer = "r";
+    players = [
+      new Player("r"),
+      new Player("y")
+    ];
+    currentPlayer = 0;
 
     function playGame() {
       if(game.isOver()) {
         game.showWinner();
+        if(players[0].colour == game.winner) {
+          //0 Won
+          console.log(players[0]);
+        } else {
+          //1 Won
+          console.log(players[1]);
+        }
       } else {
-        playMove();
+        player = players[currentPlayer];
+        player.playMove(game);
+        currentPlayer = 1 - currentPlayer;
         setTimeout('playGame()', 200);
+        game.render();
       }
-    }
-
-    function playMove() {
-      options = game.moves();
-      var item = options[Math.floor(Math.random()*options.length)];
-      game.play(curPlayer, item);
-      curPlayer = curPlayer == "r" ? "y" : "r";
-      game.render();
     }
 
     document.addEventListener('DOMContentLoaded', function(){
