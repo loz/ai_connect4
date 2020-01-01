@@ -13,7 +13,7 @@ This is not very fast, and doesn't have any hashing of the board to consider sim
 ## How can I see it in action?
 You can view this in this repository [GitHub Pages](https://loz.github.io/ai_connect4/).
 
-The JS will run 2000 itterations and then show the moves the players are making for each run from there.
+The JS will run 2000 iterations and then show the moves the players are making for each run from there.
 
 ## Bugs
 There is some bug somewhere which allows a play a non-existent column on the far right (or possible a negative one on the left) which crops up, but I can't find what it is.  That's what I get for not writing any tests for this.
@@ -23,4 +23,4 @@ Why not?
 
 This was inspired by the [2019 Royal Institution Christmas Lectures](https://www.rigb.org/christmas-lectures/2019-secrets-and-lies)
 which had a match-box powered Noughts and Crosses player which used the same algorithm
-(but used colured beads for moves, rather than an array of columns as I have).  
+(but used coloured beads for moves, rather than an array of columns as I have).  
