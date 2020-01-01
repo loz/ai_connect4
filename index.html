@@ -1,6 +1,8 @@
 <html>
   <head>
   <script>
+    var SPEED = 10;
+    
     class Player {
 
       constructor(colour) {
@@ -10,16 +12,36 @@
       }
 
       playMove(game) {
-        var options = this.getOptions(game);
-        var item = options[Math.floor(Math.random()*options.length)];
-        //Remember Moves Taken
-        this.history.push([game.stateString(), item]);
+        var curState = game.stateString();
+        var options = this.getOptions(curState, game);
+        var item = this.pickOptions(options);
+        //Remember Move Taken
+        this.history.push([curState, item]);
 
         game.play(this.colour, item);
       }
 
-      getOptions(game) {
-        return game.moves();
+      pickOptions(options) {
+        return options[Math.floor(Math.random()*options.length)];
+      }
+
+      getOptions(curState, game) {
+        if(this.memory[curState] === undefined) {
+          this.memory[curState] = game.moves();
+        } else {
+          console.log("Use Memory!");
+        }
+        return this.memory[curState];
+      }
+
+      learnFromWin() {
+        for(var m in this.history) {
+          var move = this.history[m];
+          var state = move[0];
+          var col = move[1];
+          //Strengthen option taken for state
+          this.memory[state].push(col);
+        }
       }
 
     }
@@ -169,24 +191,26 @@
     function playGame() {
       if(game.isOver()) {
         game.showWinner();
+        var winner;
         if(players[0].colour == game.winner) {
           //0 Won
-          console.log(players[0]);
+          winner = players[0];
         } else {
           //1 Won
-          console.log(players[1]);
+          winner = players[1];
         }
+        winner.learnFromWin();
       } else {
         player = players[currentPlayer];
         player.playMove(game);
         currentPlayer = 1 - currentPlayer;
-        setTimeout('playGame()', 200);
+        setTimeout('playGame()', SPEED);
         game.render();
       }
     }
 
     document.addEventListener('DOMContentLoaded', function(){
-      setTimeout('playGame()', 200);
+      setTimeout('playGame()', SPEED);
     });
   </script>
   <style>
