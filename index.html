@@ -1,11 +1,13 @@
 <html>
   <head>
   <script>
+    var ROWS = 4 //Smaller Boards, Easier To Cover States
+    var COLS = 5
     var SPEED = 0; //Initial Speed, after slowAfter rounds, moves to SLOWSPEED
     var SLOWERSPEED = 150;
     var round = 0;
     var renderMoves = false;
-    var slowAfter = 2000;
+    var slowAfter = 200;
     
     class Player {
 
@@ -75,9 +77,9 @@
 
       playAgain() {
         this.board = []
-        for(var r = 0; r <6; r++) {
+        for(var r = 0; r < ROWS; r++) {
           var row = []
-          for(var c = 0; c < 7; c++) {
+          for(var c = 0; c < COLS; c++) {
             row.push(".")
           }
           this.board.push(row);
@@ -120,14 +122,10 @@
       }
 
       play(colour, col) {
-        if(col > 6) {
-          console.log("Invalid Col!");
-          console.log(players);
-        }
-        if(this.board[5][col] == ".") {
-          this.board[5][col] = colour;
+        if(this.board[ROWS-1][col] == ".") {
+          this.board[ROWS-1][col] = colour;
         } else {
-          for(var r = 0; r < 5; r++) {
+          for(var r = 0; r < ROWS-1; r++) {
             if(this.board[r+1][col] != ".") {
               this.board[r][col] = colour;
               break;
@@ -167,10 +165,10 @@
           }
         }
         // Any Vertical 4 in a row?
-        for(var c = 0; c < 7; c++) {
+        for(var c = 0; c < COLS; c++) {
           var seq = 1;
           var cur = "?";
-          for(var r = 0; r < 6; r++) {
+          for(var r = 0; r < ROWS; r++) {
             var cell = this.board[r][c];
             if(cell == cur && cell != ".") {
               seq += 1;
@@ -186,8 +184,8 @@
         }
 
         //Any From Left Diagonal 4 in a row?
-        for(var c = 0; c <=3 ; c++) {
-          for(var r = 0; r <=2; r++) {
+        for(var c = 0; c < COLS-3 ; c++) {
+          for(var r = 0; r < ROWS-3; r++) {
             var cell = this.board[r][c];
             if(cell != "." && 
               (this.board[r+1][c+1] == cell) &&
@@ -199,8 +197,8 @@
           }
         }
         //Any From Right Diagonal 4 in a row?
-        for(var c = 3; c <=6 ; c++) {
-          for(var r = 0; r <=2; r++) {
+        for(var c = COLS-3; c < COLS ; c++) {
+          for(var r = 0; r < ROWS-3; r++) {
             var cell = this.board[r][c];
             if(cell != "." && 
               (this.board[r+1][c-1] == cell) &&
@@ -265,7 +263,6 @@
         }
         if(renderMoves) {
           setTimeout('playGame()', SPEED * 10);
-          console.log(players);
         } else {
           setTimeout('playGame()', SPEED);
         }
