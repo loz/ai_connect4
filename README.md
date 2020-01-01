@@ -21,4 +21,6 @@ There is some bug somewhere which allows a play a non-existent column on the far
 ## Why?
 Why not?
 
-This was inspired by the [2019 Royal Institution Christmas Lectures](https://www.rigb.org/christmas-lectures/2019-secrets-and-lies) which had a match-box powered Noughts and Crosses player which used the same algorithm (but used beads for moves, rather than columns as I have).  
+This was inspired by the [2019 Royal Institution Christmas Lectures](https://www.rigb.org/christmas-lectures/2019-secrets-and-lies)
+which had a match-box powered Noughts and Crosses player which used the same algorithm
+(but used colured beads for moves, rather than an array of columns as I have).  
