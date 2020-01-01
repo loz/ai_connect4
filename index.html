@@ -1,8 +1,11 @@
 <html>
   <head>
   <script>
-    var SPEED = 1;
-    var round = 0
+    var SPEED = 0; //Initial Speed, after slowAfter rounds, moves to SLOWSPEED
+    var SLOWERSPEED = 150;
+    var round = 0;
+    var renderMoves = false;
+    var slowAfter = 2000;
     
     class Player {
 
@@ -28,9 +31,24 @@
 
       getOptions(curState, game) {
         if(this.memory[curState] === undefined) {
-          this.memory[curState] = game.moves();
+          this.memory[curState] = [];
+          //10 * options
+          for(var t = 0; t < 10; t++) {
+            this.memory[curState] = this.memory[curState].concat(game.moves());
+          }
         }
         return this.memory[curState];
+      }
+
+      learnFromLoss() {
+        for(var m in this.history) {
+          var move = this.history[m];
+          var state = move[0];
+          var col = move[1];
+          //Weaken option taken for state
+          var first = this.memory[state].indexOf(col);
+          this.memory[state].splice(first, 1);
+        }
       }
 
       learnFromWin() {
@@ -75,10 +93,10 @@
         info.innerHTML = "Round: " + n
       }
 
-      showWinner() {
+      showWinner(round) {
         var names = {"r": "Red", "y": "Yellow", "d": "Draw!"};
         var info = document.getElementById("info");
-        info.innerHTML = "Winner is " + names[this.winner];
+        info.innerHTML = "Round " + round + " Winner is " + names[this.winner];
       }
 
       render() {
@@ -102,6 +120,10 @@
       }
 
       play(colour, col) {
+        if(col > 6) {
+          console.log("Invalid Col!");
+          console.log(players);
+        }
         if(this.board[5][col] == ".") {
           this.board[5][col] = colour;
         } else {
@@ -215,34 +237,44 @@
 
     function playGame() {
       if(game.isOver()) {
-        game.showWinner();
+        //game.render();
+        game.showWinner(round);
         var winner = false;
+        var loser;
         if(players[0].colour == game.winner) {
           //0 Won
           winner = players[0];
+          loser = players[1];
         }
         if(players[1].colour == game.winner) {
           //1 Won
           winner = players[1];
+          loser = players[0];
         }
         if(winner) {
           winner.learnFromWin();
+          loser.learnFromLoss();
         }
         players[0].playAgain();
         players[1].playAgain();
         game.playAgain();
         round += 1;
-        if(round == 1000) {
-          SPEED = 150;
+        if(round == slowAfter) {
+          SPEED = SLOWERSPEED;
+          renderMoves = true;
         }
-        game.showRound(round);
-        setTimeout('playGame()', SPEED);
+        if(renderMoves) {
+          setTimeout('playGame()', SPEED * 10);
+          console.log(players);
+        } else {
+          setTimeout('playGame()', SPEED);
+        }
       } else {
         player = players[currentPlayer];
         player.playMove(game);
         currentPlayer = 1 - currentPlayer;
         setTimeout('playGame()', SPEED);
-        game.render();
+        if(renderMoves) { game.render() }
       }
     }
 
