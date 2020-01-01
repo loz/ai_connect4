@@ -15,6 +15,11 @@ You can view this in this repository [GitHub Pages](https://loz.github.io/ai_con
 
 The JS will run 2000 iterations and then show the moves the players are making for each run from there.
 
+### Additional Model
+There is an [additional model](https://loz.github.io/ai_connect4/index2) added, which uses the surrounding neighbors as a view of state
+which will reduce the states and attempts to do some simplistic model which will allow
+same shapes to match in different positions.
+
 ## Bugs
 There is some bug somewhere which allows a play a non-existent column on the far right (or possible a negative one on the left) which crops up, but I can't find what it is.  That's what I get for not writing any tests for this.
 
