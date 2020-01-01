@@ -1,7 +1,8 @@
 <html>
   <head>
   <script>
-    var SPEED = 10;
+    var SPEED = 1;
+    var round = 0
     
     class Player {
 
@@ -28,8 +29,6 @@
       getOptions(curState, game) {
         if(this.memory[curState] === undefined) {
           this.memory[curState] = game.moves();
-        } else {
-          console.log("Use Memory!");
         }
         return this.memory[curState];
       }
@@ -44,11 +43,19 @@
         }
       }
 
+      playAgain() {
+        this.history = []; //Reset History
+      }
+
     }
 
 
     class Game {
       constructor() {
+        this.playAgain();
+      }
+
+      playAgain() {
         this.board = []
         for(var r = 0; r <6; r++) {
           var row = []
@@ -63,9 +70,13 @@
         return this.board.join(":");
       }
 
+      showRound(n) {
+        var info = document.getElementById("info");
+        info.innerHTML = "Round: " + n
+      }
 
       showWinner() {
-        var names = {"r": "Red", "y": "Yellow"};
+        var names = {"r": "Red", "y": "Yellow", "d": "Draw!"};
         var info = document.getElementById("info");
         info.innerHTML = "Winner is " + names[this.winner];
       }
@@ -178,6 +189,20 @@
             }
           }
         }
+
+        //Board Full? -> Draw
+        var empty = 0;
+        for(var r in this.board) {
+          for(var c in this.board[r]) {
+            if(this.board[r][c] == ".") {
+              empty += 1;
+            }
+          }
+        }
+        if(empty == 0) {
+          this.winner = 'd';
+          return true;
+        }
       }
     }
 
@@ -191,15 +216,27 @@
     function playGame() {
       if(game.isOver()) {
         game.showWinner();
-        var winner;
+        var winner = false;
         if(players[0].colour == game.winner) {
           //0 Won
           winner = players[0];
-        } else {
+        }
+        if(players[1].colour == game.winner) {
           //1 Won
           winner = players[1];
         }
-        winner.learnFromWin();
+        if(winner) {
+          winner.learnFromWin();
+        }
+        players[0].playAgain();
+        players[1].playAgain();
+        game.playAgain();
+        round += 1;
+        if(round == 1000) {
+          SPEED = 150;
+        }
+        game.showRound(round);
+        setTimeout('playGame()', SPEED);
       } else {
         player = players[currentPlayer];
         player.playMove(game);
