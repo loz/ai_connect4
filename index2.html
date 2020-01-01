@@ -1,0 +1,378 @@
+<html>
+  <head>
+  <script>
+    var ROWS = 6 //Smaller Boards, Easier To Cover States
+    var COLS = 7
+    var SPEED = 0; //Initial Speed, after slowAfter rounds, moves to SLOWSPEED
+    var SLOWERSPEED = 150;
+    var round = 0;
+    var renderMoves = false;
+    var slowAfter = 2000;
+    
+    class Player {
+
+      constructor(colour) {
+        this.colour = colour;
+        this.memory = {}; // States => Options
+        this.history = []; // of [State, Move]
+      }
+
+      playMove(game) {
+        var options = this.getOptions(game);
+        var choice = this.pickOptions(options);
+        var state = choice[1];
+        var col = choice[0];
+        //Remember Choice
+        this.history.push([state, col]);
+
+        game.play(this.colour, col);
+      }
+
+      pickOptions(choices) {
+        var cols = choices[0];
+        var states = choices[1];
+        var chosen = cols[Math.floor(Math.random()*cols.length)];
+        for(var s in states) {
+          var state = states[s];
+          if(state[0] == chosen) {
+            return state;
+          }
+        }
+      }
+
+      getOptions(game) {
+        var possible = game.analyseMoves();
+        var options = [];
+        for(var m in possible) {
+          var move = possible[m];
+          var col = move[0];
+          var state = move[1];
+          if(this.memory[state] === undefined) {
+            console.log("New State: ", state);
+            this.memory[state] = 100;
+          }
+          var count = this.memory[state];
+          for(var n=0; n < count; n++) {
+            options.push(col);
+          }
+        }
+        return [options, possible];
+      }
+
+      learnFromLoss() {
+        for(var m in this.history) {
+          var move = this.history[m];
+          var state = move[0];
+          //Weaken option taken for state
+          if(this.memory[state] > 1) {
+             this.memory[state] -= 1;
+          }
+        }
+      }
+
+      learnFromWin() {
+        for(var m in this.history) {
+          var move = this.history[m];
+          var state = move[0];
+          //Strengthen option taken for state
+          this.memory[state] += 1;
+        }
+      }
+
+      playAgain() {
+        this.history = []; //Reset History
+      }
+
+    }
+
+
+    class Game {
+      constructor() {
+        this.playAgain();
+      }
+
+      playAgain() {
+        this.board = []
+        for(var r = 0; r < ROWS; r++) {
+          var row = []
+          for(var c = 0; c < COLS; c++) {
+            row.push(".")
+          }
+          this.board.push(row);
+        }
+      }
+
+      stateString() {
+        return this.board.join(":");
+      }
+
+      showRound(n) {
+        var info = document.getElementById("info");
+        info.innerHTML = "Round: " + n
+      }
+
+      showWinner(round) {
+        var names = {"r": "Red", "y": "Yellow", "d": "Draw!"};
+        var info = document.getElementById("info");
+        info.innerHTML = "Round " + round + " Winner is " + names[this.winner];
+      }
+
+      render() {
+        var grid = document.createElement("TABLE");
+        for(var r in this.board) {
+          var row = this.board[r];
+          var rowElem = document.createElement("TR");
+          for(var c in row) {
+            var cell = row[c];
+            var cellElem = document.createElement("TD");
+            cellElem.className = cell;
+            rowElem.appendChild(cellElem);
+          }
+          grid.appendChild(rowElem);
+        }
+        var board = document.getElementById("board");
+        var newBoard = document.createElement("DIV");
+        newBoard.appendChild(grid);
+        board.replaceWith(newBoard);
+        newBoard.id = "board";
+      }
+
+      play(colour, col) {
+        if(this.board[ROWS-1][col] == ".") {
+           this.board[ROWS-1][col] = colour;
+        } else {
+          for(var r = 0; r < ROWS-1; r++) {
+            if(this.board[r+1][col] != ".") {
+               this.board[r][col] = colour;
+              break;
+            }
+          }
+        }
+      }
+
+      neighbors(x,y) {
+        var deltas = [
+          [-1, -1],
+          [+1, -1],
+          [-1, 0],
+          [+1, 0],
+          [-1, +1],
+          [0, +1],
+          [+1, +1]
+        ]
+        var cells = [];
+        for(var d in deltas) {
+          var delta = deltas[d];
+          var dx = delta[0];
+          var dy = delta[1];
+          var cx = x + dx;
+          var cy = y + dy;
+          var row = this.board[cy];
+          if(row) {
+            cells.push(row[cx]);
+          } else {
+            cells.push(undefined);
+          }
+        }
+        return cells;
+      }
+
+      analyseMoves() {
+        var moves = [];
+        for(var c = 0; c < COLS; c++) {
+          var lowest = ROWS;
+          var found = false;
+          for(var r = 0; r < ROWS; r++) {
+            if(!found && this.board[r][c] != ".") {
+              found = true;
+              lowest = r;
+            }
+          }
+          if(lowest > 0) {
+            moves.push([c,this.neighbors(c,lowest-1)]);
+          }
+        }
+        return moves;
+      }
+
+      moves() {
+        var options = [];
+        var top = this.board[0];
+        for(var c in top) {
+          if(top[c] == ".") {
+            options.push(c);
+          }
+        }
+        return options;
+      }
+
+      isOver() {
+        // Any Horiz 4 in a row?
+        for(var r in this.board) {
+          var seq = 1;
+          var cur = "?";
+          for(var c in this.board[r]) {
+            var cell = this.board[r][c];
+            if(cell == cur && cell != ".") {
+              seq += 1;
+              if(seq == 4) {
+                this.winner = cell;
+                return true;
+              }
+            } else {
+              seq = 1;
+              cur = cell;
+            }
+          }
+        }
+        // Any Vertical 4 in a row?
+        for(var c = 0; c < COLS; c++) {
+          var seq = 1;
+          var cur = "?";
+          for(var r = 0; r < ROWS; r++) {
+            var cell = this.board[r][c];
+            if(cell == cur && cell != ".") {
+              seq += 1;
+              if(seq == 4) {
+                this.winner = cell;
+                return true;
+              }
+            } else {
+              seq = 1;
+              cur = cell;
+            }
+          }
+        }
+
+        //Any From Left Diagonal 4 in a row?
+        for(var c = 0; c < COLS-3 ; c++) {
+          for(var r = 0; r < ROWS-3; r++) {
+            var cell = this.board[r][c];
+            if(cell != "." && 
+              (this.board[r+1][c+1] == cell) &&
+              (this.board[r+2][c+2] == cell) &&
+              (this.board[r+3][c+3] == cell)) {
+              this.winner = cell;
+              return true;
+            }
+          }
+        }
+        //Any From Right Diagonal 4 in a row?
+        for(var c = COLS-3; c < COLS ; c++) {
+          for(var r = 0; r < ROWS-3; r++) {
+            var cell = this.board[r][c];
+            if(cell != "." && 
+              (this.board[r+1][c-1] == cell) &&
+              (this.board[r+2][c-2] == cell) &&
+              (this.board[r+3][c-3] == cell)) {
+              this.winner = cell;
+              return true;
+            }
+          }
+        }
+
+        //Board Full? -> Draw
+        var empty = 0;
+        for(var r in this.board) {
+          for(var c in this.board[r]) {
+            if(this.board[r][c] == ".") {
+              empty += 1;
+            }
+          }
+        }
+        if(empty == 0) {
+          this.winner = 'd';
+          return true;
+        }
+      }
+    }
+
+    game = new Game();
+    players = [
+      new Player("r"),
+      new Player("y")
+    ];
+    currentPlayer = 0;
+
+    function playGame() {
+      if(game.isOver()) {
+        //game.render();
+        game.showWinner(round);
+        var winner = false;
+        var loser;
+        if(players[0].colour == game.winner) {
+          //0 Won
+          winner = players[0];
+          loser = players[1];
+        }
+        if(players[1].colour == game.winner) {
+          //1 Won
+          winner = players[1];
+          loser = players[0];
+        }
+        if(winner) {
+          winner.learnFromWin();
+          loser.learnFromLoss();
+        }
+        players[0].playAgain();
+        players[1].playAgain();
+        //console.log(players);
+        //game.render();
+        game.playAgain();
+        round += 1;
+        if(round == slowAfter) {
+          SPEED = SLOWERSPEED;
+          renderMoves = true;
+        }
+        if(renderMoves) {
+          setTimeout('playGame()', SPEED * 10);
+        } else {
+          setTimeout('playGame()', SPEED);
+        }
+      } else {
+        player = players[currentPlayer];
+        player.playMove(game);
+        currentPlayer = 1 - currentPlayer;
+        setTimeout('playGame()', SPEED);
+        if(renderMoves) { game.render() }
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+      setTimeout('playGame()', SPEED);
+    });
+  </script>
+  <style>
+    #board table {
+      border: 1px solid black;
+      background-color: blue;
+    }
+    #board table tr {
+      padding: 0;
+      margin: 0;
+    }
+
+    #board table td {
+      padding: 0;
+      margin: 0;
+      border: 1px solid black;
+      width: 12px;
+      height: 12px;
+      background-color: #ddd;
+    }
+
+    #board table td.r {
+      background-color: red;
+    }
+
+    #board table td.y {
+      background-color: yellow;
+    }
+  </style>
+  </head>
+  <body>
+    <div id='board'><span/></div>
+    <div id='info'>
+    </div>
+  </body>
+</html>
