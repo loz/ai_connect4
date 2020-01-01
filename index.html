@@ -8,10 +8,21 @@
         for(var r = 0; r <6; r++) {
           var row = []
           for(var c = 0; c < 7; c++) {
-            row.push('')
+            row.push(".")
           }
           this.board.push(row);
         }
+      }
+
+      stateString() {
+        return this.board.join(":");
+      }
+
+
+      showWinner() {
+        var names = {"r": "Red", "y": "Yellow"};
+        var info = document.getElementById("info");
+        info.innerHTML = "Winner is " + names[this.winner];
       }
 
       render() {
@@ -35,11 +46,11 @@
       }
 
       play(colour, col) {
-        if(this.board[5][col] == '') {
+        if(this.board[5][col] == ".") {
           this.board[5][col] = colour;
         } else {
           for(var r = 0; r < 5; r++) {
-            if(this.board[r+1][col] != '') {
+            if(this.board[r+1][col] != ".") {
               this.board[r][col] = colour;
               break;
             }
@@ -51,16 +62,91 @@
         var options = [];
         var top = this.board[0];
         for(var c in top) {
-          if(top[c] == '') {
+          if(top[c] == ".") {
             options.push(c);
           }
         }
         return options;
       }
+
+      isOver() {
+        // Any Horiz 4 in a row?
+        for(var r in this.board) {
+          var seq = 1;
+          var cur = "?";
+          for(var c in this.board[r]) {
+            var cell = this.board[r][c];
+            if(cell == cur && cell != ".") {
+              seq += 1;
+              if(seq == 4) {
+                this.winner = cell;
+                return true;
+              }
+            } else {
+              seq = 1;
+              cur = cell;
+            }
+          }
+        }
+        // Any Vertical 4 in a row?
+        for(var c = 0; c < 7; c++) {
+          var seq = 1;
+          var cur = "?";
+          for(var r = 0; r < 6; r++) {
+            var cell = this.board[r][c];
+            if(cell == cur && cell != ".") {
+              seq += 1;
+              if(seq == 4) {
+                this.winner = cell;
+                return true;
+              }
+            } else {
+              seq = 1;
+              cur = cell;
+            }
+          }
+        }
+
+        //Any From Left Diagonal 4 in a row?
+        for(var c = 0; c <=3 ; c++) {
+          for(var r = 0; r <=2; r++) {
+            var cell = this.board[r][c];
+            if(cell != "." && 
+              (this.board[r+1][c+1] == cell) &&
+              (this.board[r+2][c+2] == cell) &&
+              (this.board[r+3][c+3] == cell)) {
+              this.winner = cell;
+              return true;
+            }
+          }
+        }
+        //Any From Right Diagonal 4 in a row?
+        for(var c = 3; c <=6 ; c++) {
+          for(var r = 0; r <=2; r++) {
+            var cell = this.board[r][c];
+            if(cell != "." && 
+              (this.board[r+1][c-1] == cell) &&
+              (this.board[r+2][c-2] == cell) &&
+              (this.board[r+3][c-3] == cell)) {
+              this.winner = cell;
+              return true;
+            }
+          }
+        }
+      }
     }
 
     game = new Game();
     curPlayer = "r";
+
+    function playGame() {
+      if(game.isOver()) {
+        game.showWinner();
+      } else {
+        playMove();
+        setTimeout('playGame()', 200);
+      }
+    }
 
     function playMove() {
       options = game.moves();
@@ -71,7 +157,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', function(){
-      setInterval('playMove()', 200);
+      setTimeout('playGame()', 200);
     });
   </script>
   <style>
