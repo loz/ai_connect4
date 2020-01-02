@@ -4,12 +4,34 @@
   <script>
     var ROWS = 6 //Smaller Boards, Easier To Cover States
     var COLS = 7
-    var SPEED = 0; //Initial Speed, after slowAfter rounds, moves to SLOWSPEED
-    var SLOWERSPEED = 150;
-    var TRAINING_RUNS = 20;
+    var SPEED = 150; 
+    var TRAINING_RUNS = 500;
     var round = 0;
-    var renderMoves = false;
-    var slowAfter = 400;
+
+    class TensorPlayer {
+      constructor(colour, model) {
+        this.colour = colour;
+        this.model = model;
+      }
+
+      playMove(game) {
+        var curState = game.flatState();
+        var options = game.moves();
+        var result = this.model.predict(tf.tensor2d([curState], [1,ROWS*COLS]));
+        var selected = result.argMax(-1).dataSync()[0];
+        if(options.includes(selected)) {
+          game.play(this.colour, selected);
+        } else {
+          //Play Random
+          console.log("Invalid Prediction, Go Random");
+          game.play(this.colour, this.pickOptions(options));
+        }
+      }
+
+      pickOptions(options) {
+        return options[Math.floor(Math.random()*options.length)];
+      }
+    }
     
     class TrainingPlayer {
 
@@ -74,14 +96,24 @@
       }
 
       showRound(n) {
-        var info = document.getElementById("info");
-        info.innerHTML = "Round: " + n
+        this.showMessage("Round: " + n);
       }
 
       showWinner(round) {
         var names = {1: "Red", 2: "Yellow", 0: "Draw!"};
+        this.showMessage("Round " + round + " Winner is " + names[this.winner]);
+      }
+
+      showMessage(message) {
         var info = document.getElementById("info");
-        info.innerHTML = "Round " + round + " Winner is " + names[this.winner];
+        info.innerHTML = message;
+      }
+
+      setBoard(board) {
+        this.board = [];
+        for(var r=0; r<ROWS; r++) {
+          this.board.push(board.slice((r*COLS), (r*COLS) + COLS));
+        }
       }
 
       render() {
@@ -122,7 +154,7 @@
         var top = this.board[0];
         for(var c in top) {
           if(top[c] == 0) {
-            options.push(c);
+            options.push(c * 1);
           }
         }
         return options;
@@ -233,6 +265,7 @@
     }
 
     async function buildModel(states, moves) {
+      game.showMessage("Building Tensor Model");
       var input = tf.input({shape: [ROWS*COLS]})
       var dense1 = tf.layers.dense({units: COLS, activiation: 'relu'}).apply(input);
       var dense2 = tf.layers.dense({units: COLS, activation: 'softmax'}).apply(dense1);
@@ -263,8 +296,14 @@
       console.log(ys);
       console.log("HERE");
       await model.fit(xs, ys, {epochs: 250});
-      debugger
-      console.log(model.predict(tf.tensor2d(states[0], [ROWS*COLS, 1])));
+      //var p = model.predict(tf.tensor2d([states[0]], [1,ROWS*COLS]));
+      game.showMessage("Playing With Tensor Models");
+      players = [
+        new TensorPlayer(1, model),
+        new TensorPlayer(2, model)
+      ];
+      game.playAgain();
+      setTimeout('playGame()', 0);
     }
 
     function doBuildTrainingData() {
@@ -302,43 +341,17 @@
 
     function playGame() {
       if(game.isOver()) {
-        //game.render();
+        game.render();
         game.showWinner(round);
-        var winner = false;
-        var loser;
-        if(players[0].colour == game.winner) {
-          //0 Won
-          winner = players[0];
-          loser = players[1];
-        }
-        if(players[1].colour == game.winner) {
-          //1 Won
-          winner = players[1];
-          loser = players[0];
-        }
-        if(winner) {
-          winner.learnFromWin();
-          loser.learnFromLoss();
-        }
-        players[0].playAgain();
-        players[1].playAgain();
         game.playAgain();
         round += 1;
-        if(round == slowAfter) {
-          SPEED = SLOWERSPEED;
-          renderMoves = true;
-        }
-        if(renderMoves) {
-          setTimeout('playGame()', SPEED * 10);
-        } else {
-          setTimeout('playGame()', SPEED);
-        }
+        setTimeout('playGame()', SPEED * 10);
       } else {
         player = players[currentPlayer];
         player.playMove(game);
         currentPlayer = 1 - currentPlayer;
+        game.render();
         setTimeout('playGame()', SPEED);
-        if(renderMoves) { game.render() }
       }
     }
 

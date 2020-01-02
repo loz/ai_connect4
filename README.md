@@ -15,10 +15,13 @@ You can view this in this repository [GitHub Pages](https://loz.github.io/ai_con
 
 The JS will run 2000 iterations and then show the moves the players are making for each run from there.
 
-### Additional Model
-There is an [additional model](https://loz.github.io/ai_connect4/index2) added, which uses the surrounding neighbors as a view of state
+### Additional Models
+There is an [second model](https://loz.github.io/ai_connect4/index2) added, which uses the surrounding neighbors as a view of state
 which will reduce the states and attempts to do some simplistic model which will allow
 same shapes to match in different positions.
+
+The [third model](https://loz.github.io/ai_connect4/index3) is a rough [TensorFlow.js](https://tensorflow.org) implementation.  This doesn't do reinforcement, and just simply provides the grid input.  This is trained with 500 totally random plays, and the training data is just the last
+state of the board with the winning move.
 
 ## Bugs
 There is some bug somewhere which allows a play a non-existent column on the far right (or possible a negative one on the left) which crops up, but I can't find what it is.  That's what I get for not writing any tests for this.
