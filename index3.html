@@ -1,0 +1,382 @@
+<html>
+  <head>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.0.0/dist/tf.min.js"></script>
+  <script>
+    var ROWS = 6 //Smaller Boards, Easier To Cover States
+    var COLS = 7
+    var SPEED = 0; //Initial Speed, after slowAfter rounds, moves to SLOWSPEED
+    var SLOWERSPEED = 150;
+    var TRAINING_RUNS = 20;
+    var round = 0;
+    var renderMoves = false;
+    var slowAfter = 400;
+    
+    class TrainingPlayer {
+
+      constructor(colour) {
+        this.colour = colour;
+        this.memory = []; // of winning moves
+        this.history = []; // of [State, Move]
+      }
+
+      playMove(game) {
+        var curState = game.flatState();
+        var options = this.getOptions(curState, game);
+        var item = this.pickOptions(options);
+        //Remember Move Taken
+        this.history.push([curState, item]);
+
+        game.play(this.colour, item);
+      }
+
+      pickOptions(options) {
+        return options[Math.floor(Math.random()*options.length)];
+      }
+
+      getOptions(curState, game) {
+        return game.moves();
+      }
+
+      learnFromWin() {
+        //Remember Winning Move
+        this.memory.push(this.history.pop());
+      }
+
+      playAgain() {
+        this.history = []; //Reset History
+      }
+
+    }
+
+
+    class Game {
+      constructor() {
+        this.playAgain();
+      }
+
+      playAgain() {
+        this.board = []
+        for(var r = 0; r < ROWS; r++) {
+          var row = []
+          for(var c = 0; c < COLS; c++) {
+            row.push(0);
+          }
+          this.board.push(row);
+        }
+      }
+
+      stateString() {
+        return this.board.join(":");
+      }
+
+      flatState() {
+        return this.board.flat();
+      }
+
+      showRound(n) {
+        var info = document.getElementById("info");
+        info.innerHTML = "Round: " + n
+      }
+
+      showWinner(round) {
+        var names = {1: "Red", 2: "Yellow", 0: "Draw!"};
+        var info = document.getElementById("info");
+        info.innerHTML = "Round " + round + " Winner is " + names[this.winner];
+      }
+
+      render() {
+        var grid = document.createElement("TABLE");
+        for(var r in this.board) {
+          var row = this.board[r];
+          var rowElem = document.createElement("TR");
+          for(var c in row) {
+            var cell = row[c];
+            var cellElem = document.createElement("TD");
+            cellElem.className = "p" + cell;
+            rowElem.appendChild(cellElem);
+          }
+          grid.appendChild(rowElem);
+        }
+        var board = document.getElementById("board");
+        var newBoard = document.createElement("DIV");
+        newBoard.appendChild(grid);
+        board.replaceWith(newBoard);
+        newBoard.id = "board";
+      }
+
+      play(colour, col) {
+        if(this.board[ROWS-1][col] == 0) {
+          this.board[ROWS-1][col] = colour;
+        } else {
+          for(var r = 0; r < ROWS-1; r++) {
+            if(this.board[r+1][col] != 0) {
+              this.board[r][col] = colour;
+              break;
+            }
+          }
+        }
+      }
+
+      moves() {
+        var options = [];
+        var top = this.board[0];
+        for(var c in top) {
+          if(top[c] == 0) {
+            options.push(c);
+          }
+        }
+        return options;
+      }
+
+      isOver() {
+        // Any Horiz 4 in a row?
+        for(var r in this.board) {
+          var seq = 1;
+          var cur = -1;
+          for(var c in this.board[r]) {
+            var cell = this.board[r][c];
+            if(cell == cur && cell != 0) {
+              seq += 1;
+              if(seq == 4) {
+                this.winner = cell;
+                return true;
+              }
+            } else {
+              seq = 1;
+              cur = cell;
+            }
+          }
+        }
+        // Any Vertical 4 in a row?
+        for(var c = 0; c < COLS; c++) {
+          var seq = 1;
+          var cur = -1;
+          for(var r = 0; r < ROWS; r++) {
+            var cell = this.board[r][c];
+            if(cell == cur && cell != 0) {
+              seq += 1;
+              if(seq == 4) {
+                this.winner = cell;
+                return true;
+              }
+            } else {
+              seq = 1;
+              cur = cell;
+            }
+          }
+        }
+
+        //Any From Left Diagonal 4 in a row?
+        for(var c = 0; c < COLS-3 ; c++) {
+          for(var r = 0; r < ROWS-3; r++) {
+            var cell = this.board[r][c];
+            if(cell != 0 && 
+              (this.board[r+1][c+1] == cell) &&
+              (this.board[r+2][c+2] == cell) &&
+              (this.board[r+3][c+3] == cell)) {
+              this.winner = cell;
+              return true;
+            }
+          }
+        }
+        //Any From Right Diagonal 4 in a row?
+        for(var c = COLS-3; c < COLS ; c++) {
+          for(var r = 0; r < ROWS-3; r++) {
+            var cell = this.board[r][c];
+            if(cell != 0 && 
+              (this.board[r+1][c-1] == cell) &&
+              (this.board[r+2][c-2] == cell) &&
+              (this.board[r+3][c-3] == cell)) {
+              this.winner = cell;
+              return true;
+            }
+          }
+        }
+
+        //Board Full? -> Draw
+        var empty = 0;
+        for(var r in this.board) {
+          for(var c in this.board[r]) {
+            if(this.board[r][c] == 0) {
+              empty += 1;
+            }
+          }
+        }
+        if(empty == 0) {
+          this.winner = 0;
+          return true;
+        }
+      }
+    }
+
+    game = new Game();
+    players = [
+      new TrainingPlayer(1),
+      new TrainingPlayer(2)
+    ];
+    currentPlayer = 0;
+
+    function completedTraining() {
+      console.log("Training Complete!");
+      var trainingData = players[0].memory.concat(players[1].memory);
+      var states = [];
+      var moves = [];
+      for(m in trainingData) {
+        var state = trainingData[m];
+        states.push(state[0]);
+        moves.push(state[1]);
+      }
+      console.log(states);
+      console.log(moves);
+
+      buildModel(states, moves);
+    }
+
+    async function buildModel(states, moves) {
+      var input = tf.input({shape: [ROWS*COLS]})
+      var dense1 = tf.layers.dense({units: COLS, activiation: 'relu'}).apply(input);
+      var dense2 = tf.layers.dense({units: COLS, activation: 'softmax'}).apply(dense1);
+      var model = tf.model({inputs: input, outputs: dense2});
+
+      //Compile
+      model.compile({
+        loss: 'meanSquaredError',
+        optimizer: 'sgd'
+      });
+
+      var moveHots = [];
+      var blank = [];
+      for(c = 0; c < COLS; c++) {
+        blank.push(0);
+      }
+
+      for(m in moves) {
+        var move = moves[m];
+        var hot = blank.slice();
+        hot[move] = 1;
+        moveHots.push(hot);
+      }
+      //Give Training Data
+      var xs = tf.tensor2d(states, [states.length, ROWS*COLS]);
+      var ys = tf.tensor2d(moveHots, [states.length, COLS]);
+      console.log(xs);
+      console.log(ys);
+      console.log("HERE");
+      await model.fit(xs, ys, {epochs: 250});
+      debugger
+      console.log(model.predict(tf.tensor2d(states[0], [ROWS*COLS, 1])));
+    }
+
+    function doBuildTrainingData() {
+      if(game.isOver()) {
+        game.showWinner(round);
+        var winner = false;
+        var loser;
+        if(players[0].colour == game.winner) {
+          //0 Won
+          winner = players[0];
+          loser = players[1];
+        }
+        if(players[1].colour == game.winner) {
+          //1 Won
+          winner = players[1];
+          loser = players[0];
+        }
+        if(winner) { winner.learnFromWin(); }
+        players[0].playAgain();
+        players[1].playAgain();
+        game.playAgain();
+        round += 1;
+        if(round < TRAINING_RUNS) {
+          setTimeout('doBuildTrainingData()', 0);
+        } else {
+          completedTraining();
+        }
+      } else {
+        player = players[currentPlayer];
+        player.playMove(game);
+        currentPlayer = 1 - currentPlayer;
+        setTimeout('doBuildTrainingData()', 0);
+      }
+    }
+
+    function playGame() {
+      if(game.isOver()) {
+        //game.render();
+        game.showWinner(round);
+        var winner = false;
+        var loser;
+        if(players[0].colour == game.winner) {
+          //0 Won
+          winner = players[0];
+          loser = players[1];
+        }
+        if(players[1].colour == game.winner) {
+          //1 Won
+          winner = players[1];
+          loser = players[0];
+        }
+        if(winner) {
+          winner.learnFromWin();
+          loser.learnFromLoss();
+        }
+        players[0].playAgain();
+        players[1].playAgain();
+        game.playAgain();
+        round += 1;
+        if(round == slowAfter) {
+          SPEED = SLOWERSPEED;
+          renderMoves = true;
+        }
+        if(renderMoves) {
+          setTimeout('playGame()', SPEED * 10);
+        } else {
+          setTimeout('playGame()', SPEED);
+        }
+      } else {
+        player = players[currentPlayer];
+        player.playMove(game);
+        currentPlayer = 1 - currentPlayer;
+        setTimeout('playGame()', SPEED);
+        if(renderMoves) { game.render() }
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+      doBuildTrainingData();
+    });
+  </script>
+  <style>
+    #board table {
+      border: 1px solid black;
+      background-color: blue;
+    }
+    #board table tr {
+      padding: 0;
+      margin: 0;
+    }
+
+    #board table td {
+      padding: 0;
+      margin: 0;
+      border: 1px solid black;
+      width: 12px;
+      height: 12px;
+      background-color: #ddd;
+    }
+
+    #board table td.p1 {
+      background-color: red;
+    }
+
+    #board table td.p2 {
+      background-color: yellow;
+    }
+  </style>
+  </head>
+  <body>
+    <div id='board'><span/></div>
+    <div id='info'>
+    </div>
+  </body>
+</html>
