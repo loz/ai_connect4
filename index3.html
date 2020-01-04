@@ -5,8 +5,13 @@
     var ROWS = 6 //Smaller Boards, Easier To Cover States
     var COLS = 7
     var SPEED = 150; 
-    var TRAINING_RUNS = 500;
+    var TRAINING_RUNS = 1000;
+    var TRAINING_EPOCHS = 50;
     var round = 0;
+    var winRatio = {
+      1: 0,
+      2: 0
+    }
 
     class TensorPlayer {
       constructor(colour, model) {
@@ -95,6 +100,10 @@
         return this.board.flat();
       }
 
+      showRatio() {
+        this.showSummary("Wins: Red: " + winRatio[1] + ", Yellow: " + winRatio[2]);
+      }
+
       showRound(n) {
         this.showMessage("Round: " + n);
       }
@@ -102,6 +111,11 @@
       showWinner(round) {
         var names = {1: "Red", 2: "Yellow", 0: "Draw!"};
         this.showMessage("Round " + round + " Winner is " + names[this.winner]);
+      }
+
+      showSummary(message) {
+        var div = document.getElementById("summary");
+        div.innerHTML = message;
       }
 
       showMessage(message) {
@@ -295,12 +309,12 @@
       console.log(xs);
       console.log(ys);
       console.log("HERE");
-      await model.fit(xs, ys, {epochs: 250});
+      await model.fit(xs, ys, {epochs: TRAINING_EPOCHS});
       //var p = model.predict(tf.tensor2d([states[0]], [1,ROWS*COLS]));
       game.showMessage("Playing With Tensor Models");
       players = [
         new TensorPlayer(1, model),
-        new TensorPlayer(2, model)
+        new TrainingPlayer(2, model)
       ];
       game.playAgain();
       setTimeout('playGame()', 0);
@@ -343,6 +357,8 @@
       if(game.isOver()) {
         game.render();
         game.showWinner(round);
+        winRatio[game.winner] += 1;
+        game.showRatio();
         game.playAgain();
         round += 1;
         setTimeout('playGame()', SPEED * 10);
@@ -389,7 +405,7 @@
   </head>
   <body>
     <div id='board'><span/></div>
-    <div id='info'>
-    </div>
+    <div id='info'></div>
+    <div id='summary'></div>
   </body>
 </html>
